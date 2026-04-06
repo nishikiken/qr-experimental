@@ -1,11 +1,5 @@
-// Supabase Configuration
-const SUPABASE_URL = 'https://hyxyablgkjtoxcxnurkk.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5eHlhYmxna2p0b3hjeG51cmtrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxODE5NjksImV4cCI6MjA4NDc1Nzk2OX0._3HQYSymZ2ArXIN143gAiwulCL1yt7i5fiHaTd4bp5U';
-
-let supabase;
-if (window.supabase) {
-    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-}
+// EXPERIMENTAL VERSION - Mock Data Only
+// No Supabase integration, full access for UI testing
 
 const tg = window.Telegram?.WebApp;
 if (tg) {
@@ -18,115 +12,69 @@ let html5QrCode = null;
 let currentFilter = 'week';
 let currentLogView = 'attendance';
 let currentLateFilter = 'week';
-let hasShownWelcome = false;
+let currentDayView = 'today';
+
+// Mock Data
+const mockUsers = [
+    { telegram_id: 1, full_name: 'Иван Петров', username: 'ivan_p', is_admin: false, is_worker: false, created_at: '2026-03-15T10:00:00Z' },
+    { telegram_id: 2, full_name: 'Мария Сидорова', username: 'maria_s', is_admin: false, is_worker: false, created_at: '2026-03-20T14:30:00Z' },
+    { telegram_id: 3, full_name: 'Алексей Иванов', username: 'alex_i', is_admin: false, is_worker: false, created_at: '2026-04-01T09:15:00Z' }
+];
+
+const mockWorkers = [
+    { telegram_id: 10, full_name: 'Анна Кузнецова', display_name: 'Анна', username: 'anna_k', gender: 'F', is_worker: true },
+    { telegram_id: 11, full_name: 'Дмитрий Смирнов', display_name: 'Дмитрий', username: 'dmitry_s', gender: 'M', is_worker: true },
+    { telegram_id: 12, full_name: 'Елена Волкова', display_name: 'Лена', username: 'elena_v', gender: 'F', is_worker: true }
+];
+
+const mockLogs = [
+    { user_id: 10, full_name: 'Анна Кузнецова', qr_code: 'QR_AUTH_2026-04-06', auth_time: '2026-04-06T07:55:00Z' },
+    { user_id: 11, full_name: 'Дмитрий Смирнов', qr_code: 'QR_AUTH_2026-04-06', auth_time: '2026-04-06T08:15:00Z' },
+    { user_id: 12, full_name: 'Елена Волкова', qr_code: 'QR_AUTH_2026-04-06', auth_time: '2026-04-06T08:30:00Z' },
+    { user_id: 10, full_name: 'Анна Кузнецова', qr_code: 'QR_AUTH_2026-04-05', auth_time: '2026-04-05T07:50:00Z' },
+    { user_id: 11, full_name: 'Дмитрий Смирнов', qr_code: 'QR_AUTH_2026-04-05', auth_time: '2026-04-05T08:20:00Z' },
+    { user_id: 10, full_name: 'Анна Кузнецова', qr_code: 'QR_AUTH_2026-04-04', auth_time: '2026-04-04T08:10:00Z' },
+    { user_id: 12, full_name: 'Елена Волкова', qr_code: 'QR_AUTH_2026-04-04', auth_time: '2026-04-04T08:25:00Z' }
+];
+
+// Load from localStorage or use defaults
+function loadMockData() {
+    const stored = localStorage.getItem('qr_auth_experimental');
+    if (stored) {
+        const data = JSON.parse(stored);
+        return data;
+    }
+    return {
+        users: [...mockUsers],
+        workers: [...mockWorkers],
+        logs: [...mockLogs]
+    };
+}
+
+function saveMockData(data) {
+    localStorage.setItem('qr_auth_experimental', JSON.stringify(data));
+}
+
+let mockData = loadMockData();
 
 // Инициализация
 async function init() {
-    let user;
+    // Всегда показываем админ панель для тестирования
+    currentUser = {
+        id: 999,
+        first_name: 'Тестовый',
+        last_name: 'Админ',
+        username: 'test_admin',
+        photo_url: null
+    };
     
-    if (!tg || !tg.initDataUnsafe || !tg.initDataUnsafe.user) {
-        const urlParams = new URLSearchParams(window.location.search);
-        const testMode = urlParams.get('test');
-        
-        user = testMode === 'admin' ? {
-            id: 999999999,
-            first_name: 'Админ',
-            last_name: 'Тестовый',
-            username: 'test_admin',
-            photo_url: null
-        } : {
-            id: 123456789,
-            first_name: 'Тестовый',
-            last_name: 'Пользователь',
-            username: 'test_user',
-            photo_url: null
-        };
-    } else {
-        user = tg.initDataUnsafe.user;
-    }
-
-    currentUser = user;
-    
-    // Получаем данные пользователя из БД для отображения display_name
-    const { data: userData } = await supabase
-        .from('qr_auth_users')
-        .select('display_name, gender, is_admin, is_worker')
-        .eq('telegram_id', user.id)
-        .single();
-    
-    const displayName = userData?.display_name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username || 'Пользователь';
-    document.getElementById('userName').textContent = displayName;
+    document.getElementById('userName').textContent = 'Тестовый Админ';
     
     const avatarEl = document.getElementById('userAvatar');
-    if (user.photo_url) {
-        avatarEl.innerHTML = `<img src="${user.photo_url}" alt="Avatar">`;
-    } else {
-        avatarEl.innerHTML = `<img src="svgg/user.svg" alt="User" style="width: 24px; height: 24px; opacity: 0.5;">`;
-    }
+    avatarEl.innerHTML = `<img src="svgg/user.svg" alt="User" style="width: 24px; height: 24px; opacity: 0.5;">`;
 
-    await registerUser(user);
-    const isAdmin = userData?.is_admin || false;
-    window.isWorker = userData?.is_worker || false;
-    window.userGender = userData?.gender || 'M';
-
-    if (isAdmin) {
-        showAdminPanel();
-    } else {
-        showUserScreen();
-    }
-    
-    // Устанавливаем сегодняшнюю дату для генератора
+    showAdminPanel();
     setTimeout(setTodayDate, 100);
-}
-
-async function registerUser(user) {
-    const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username || 'Пользователь';
-    
-    await supabase.from('qr_auth_users').upsert({
-        telegram_id: user.id,
-        username: user.username,
-        first_name: user.first_name,
-        last_name: user.last_name,
-        full_name: fullName
-    }, { onConflict: 'telegram_id' });
-}
-
-async function checkAdmin(telegramId) {
-    const { data } = await supabase
-        .from('qr_auth_users')
-        .select('is_admin, is_worker, gender')
-        .eq('telegram_id', telegramId)
-        .single();
-
-    window.isWorker = data?.is_worker || false;
-    window.userGender = data?.gender || 'M';
-    return data?.is_admin || false;
-}
-
-function showUserScreen() {
-    const roleText = window.isWorker ? 'Работник' : 'Пользователь';
-    document.getElementById('userRole').textContent = roleText;
-    
-    const headerNav = document.getElementById('headerNav');
-    
-    if (window.isWorker) {
-        headerNav.innerHTML = `
-            <button class="nav-btn active" onclick="showUserTab('scan')">Сканировать</button>
-            <button class="nav-btn" onclick="showUserTab('history')">Опоздания</button>
-        `;
-        showUserTab('scan');
-    } else {
-        // Для не-работников показываем только сообщение об ожидании
-        headerNav.innerHTML = '';
-        document.getElementById('scanTab').classList.add('active');
-        const readerEl = document.getElementById('qr-reader');
-        readerEl.innerHTML = `
-            <div class="access-denied">
-                <img src="svgg/block.svg" alt="Block" class="access-denied-icon-svg">
-                <div class="access-denied-text">Вы не идентифицированы как работник, ожидайте выдачи разрешений администратором</div>
-            </div>
-        `;
-    }
 }
 
 function showAdminPanel() {
@@ -142,34 +90,7 @@ function showAdminPanel() {
         <button class="nav-btn" onclick="showAdminTab('generate')">Генератор</button>
     `;
     
-    // Показываем приветствие и НЕ переключаемся автоматически
     document.getElementById('adminWelcome').classList.remove('hidden');
-    
-    subscribeToAuthLogs();
-}
-
-function showUserTab(tab) {
-    // Проверяем, является ли пользователь работником
-    if (!window.isWorker) {
-        return; // Не даем переключаться между вкладками
-    }
-    
-    closeMenuOnSelect();
-    document.querySelectorAll('.header-nav .nav-btn').forEach(btn => btn.classList.remove('active'));
-    event?.target?.classList.add('active');
-    
-    document.getElementById('scanTab').classList.remove('active');
-    document.getElementById('historyTab').classList.remove('active');
-    
-    if (tab === 'scan') {
-        document.getElementById('scanTab').classList.add('active');
-        checkTodayAuth();
-    } else if (tab === 'history') {
-        document.getElementById('historyTab').classList.add('active');
-        loadUserLateHistory();
-    }
-    
-    if (tg) tg.HapticFeedback.impactOccurred('light');
 }
 
 function showAdminTab(tab, subview) {
@@ -190,7 +111,7 @@ function showAdminTab(tab, subview) {
         if (subview) {
             switchLogSubmenu(subview);
         } else {
-            loadAuthLogs();
+            loadAttendanceLogs();
         }
     } else if (tab === 'users') {
         document.getElementById('usersTab').classList.add('active');
@@ -205,241 +126,10 @@ function showAdminTab(tab, subview) {
     if (tg) tg.HapticFeedback.impactOccurred('light');
 }
 
-async function checkTodayAuth() {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const { data } = await supabase
-        .from('qr_auth_logs')
-        .select('*')
-        .eq('user_id', currentUser.id)
-        .gte('auth_time', today.toISOString())
-        .limit(1);
-    
-    if (data && data.length > 0) {
-        const readerEl = document.getElementById('qr-reader');
-        readerEl.innerHTML = `
-            <div class="success-day-message">
-                <img src="svgg/success.svg" alt="Success" class="success-icon-svg">
-                <div class="success-title">Успешная авторизация!</div>
-                <div class="success-text">Хорошего рабочего дня!</div>
-            </div>
-        `;
-    } else {
-        startQRScanner();
-    }
-}
-
-function startQRScanner() {
-    if (!window.isWorker) {
-        const readerEl = document.getElementById('qr-reader');
-        readerEl.innerHTML = `
-            <div class="access-denied">
-                <img src="svgg/block.svg" alt="Block" class="access-denied-icon-svg">
-                <div class="access-denied-text">Вы не идентифицированы как работник, ожидайте выдачи разрешений администратором</div>
-            </div>
-        `;
-        return;
-    }
-    
-    if (html5QrCode) return;
-    
-    // Проверяем доступность библиотеки (может быть Html5Qrcode или Html5QrcodeScanner)
-    const QrCodeLib = window.Html5Qrcode || window.Html5QrcodeScanner;
-    if (!QrCodeLib) {
-        console.error('Html5Qrcode library not loaded. Available:', Object.keys(window).filter(k => k.includes('Html5')));
-        showResultMessage('Ошибка загрузки сканера', 'error');
-        return;
-    }
-    
-    try {
-        html5QrCode = new Html5Qrcode("qr-reader");
-        
-        html5QrCode.start(
-            { facingMode: "environment" },
-            { 
-                fps: 10, 
-                qrbox: { width: 250, height: 250 },
-                aspectRatio: 1.0
-            },
-            onScanSuccess,
-            (errorMessage) => {
-                // Игнорируем ошибки сканирования (когда QR не найден)
-            }
-        ).catch(err => {
-            console.error('Camera error:', err);
-            showResultMessage('Не удалось запустить камеру: ' + err, 'error');
-        });
-    } catch (err) {
-        console.error('Scanner initialization error:', err);
-        showResultMessage('Ошибка инициализации сканера: ' + err, 'error');
-    }
-}
-
-async function onScanSuccess(decodedText) {
-    console.log('QR Scanned:', decodedText);
-    
-    // Останавливаем сканер сразу
-    if (html5QrCode) {
-        try {
-            await html5QrCode.stop();
-        } catch (e) {
-            console.error('Error stopping scanner:', e);
-        }
-        html5QrCode = null;
-    }
-    
-    // Проверяем формат QR - принимаем оба варианта
-    if (!decodedText.startsWith('QR_AUTH_')) {
-        showResultMessage('❌ Неверный QR-код', 'error');
-        if (tg) tg.HapticFeedback.notificationOccurred('error');
-        setTimeout(() => {
-            hideResultMessage();
-            startQRScanner();
-        }, 2000);
-        return;
-    }
-
-    await sendAuthLog(decodedText);
-}
-
-async function sendAuthLog(qrCode) {
-    const fullName = `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim() 
-        || currentUser.username || 'Пользователь';
-
-    const { error } = await supabase.from('qr_auth_logs').insert({
-        user_id: currentUser.id,
-        full_name: fullName,
-        qr_code: qrCode,
-        auth_time: new Date().toISOString()
-    });
-
-    if (error) {
-        showResultMessage('Ошибка авторизации', 'error');
-        if (tg) tg.HapticFeedback.notificationOccurred('error');
-        setTimeout(() => {
-            hideResultMessage();
-            startQRScanner();
-        }, 2000);
-    } else {
-        // Показываем успешное сообщение на весь день
-        const readerEl = document.getElementById('qr-reader');
-        readerEl.innerHTML = `
-            <div class="success-day-message">
-                <img src="svgg/success.svg" alt="Success" class="success-icon-svg">
-                <div class="success-title">Успешная авторизация!</div>
-                <div class="success-text">Хорошего рабочего дня!</div>
-            </div>
-        `;
-        if (tg) tg.HapticFeedback.notificationOccurred('success');
-    }
-}
-
-// История опозданий работника
-async function loadUserLateHistory() {
-    const historyList = document.getElementById('historyList');
-    historyList.innerHTML = '<p class="loading">Загрузка...</p>';
-
-    if (!currentUser) {
-        historyList.innerHTML = '<div class="empty-state">Нет данных</div>';
-        return;
-    }
-
-    let dateFilter = new Date();
-    if (currentFilter === 'week') {
-        dateFilter.setDate(dateFilter.getDate() - 7);
-    } else if (currentFilter === 'month') {
-        dateFilter.setMonth(dateFilter.getMonth() - 1);
-    } else {
-        dateFilter = null;
-    }
-
-    let query = supabase
-        .from('qr_auth_logs')
-        .select('*')
-        .eq('user_id', currentUser.id)
-        .order('auth_time', { ascending: false });
-
-    if (dateFilter) {
-        query = query.gte('auth_time', dateFilter.toISOString());
-    }
-
-    const { data } = await query.limit(50);
-
-    if (!data || data.length === 0) {
-        const periodText = currentFilter === 'week' ? 'на этой неделе' : 'в этом месяце';
-        historyList.innerHTML = `<div class="empty-state"><img src="svgg/alarm.svg" alt="No late" style="width: 48px; height: 48px; opacity: 0.3; margin-bottom: 15px;"><br>${periodText.charAt(0).toUpperCase() + periodText.slice(1)} еще не было опозданий, так держать!</div>`;
-        return;
-    }
-
-    renderLateHistory(data);
-}
-
-function renderLateHistory(logs) {
-    const historyList = document.getElementById('historyList');
-    historyList.innerHTML = '';
-    
-    const WORK_START_HOUR = 8;
-    const WORK_START_MINUTE = 0;
-    
-    const lateEntries = logs.filter(log => {
-        const authTime = new Date(log.auth_time);
-        const hour = authTime.getHours();
-        const minute = authTime.getMinutes();
-        
-        // Опоздание если после 8:00
-        return hour > WORK_START_HOUR || (hour === WORK_START_HOUR && minute > WORK_START_MINUTE);
-    });
-    
-    if (lateEntries.length === 0) {
-        const periodText = currentFilter === 'week' ? 'на этой неделе' : 'в этом месяце';
-        historyList.innerHTML = `<div class="empty-state"><img src="svgg/alarm.svg" alt="No late" style="width: 48px; height: 48px; opacity: 0.3; margin-bottom: 15px;"><br>${periodText.charAt(0).toUpperCase() + periodText.slice(1)} не было опозданий, так держать!</div>`;
-        return;
-    }
-
-    lateEntries.forEach((log, index) => {
-        const item = document.createElement('div');
-        item.className = 'history-item late';
-        
-        const authTime = new Date(log.auth_time);
-        const dateStr = authTime.toLocaleDateString('ru-RU', {
-            day: '2-digit',
-            month: 'long'
-        });
-        const timeStr = authTime.toLocaleTimeString('ru-RU', {
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-
-        const genderText = window.userGender === 'F' ? 'Пришла' : 'Пришел';
-
-        item.innerHTML = `
-            <div class="history-item-info">
-                <div class="history-item-date">${dateStr}</div>
-                <div class="history-item-time">${genderText} в ${timeStr}</div>
-            </div>
-            <div class="history-item-late">${index + 1}</div>
-        `;
-
-        historyList.appendChild(item);
-    });
-}
-
-function filterHistory(period) {
-    currentFilter = period;
-    document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-    event?.target?.classList.add('active');
-    loadUserLateHistory();
-    if (tg) tg.HapticFeedback.impactOccurred('light');
-}
-
 // Админ: Логи
-let currentDayView = 'today';
-
 function switchLogSubmenu(view) {
     currentLogView = view;
     
-    // Обновляем заголовок
     const titleEl = document.getElementById('currentViewTitle');
     if (titleEl) {
         titleEl.textContent = view === 'attendance' ? 'Отметки' : 'Опоздания';
@@ -457,11 +147,7 @@ function switchLogSubmenu(view) {
     if (tg) tg.HapticFeedback.impactOccurred('light');
 }
 
-async function loadAuthLogs() {
-    switchLogSubmenu('attendance');
-}
-
-async function loadAttendanceLogs() {
+function loadAttendanceLogs() {
     const authList = document.getElementById('attendanceList');
     
     if (currentDayView === 'today') {
@@ -470,34 +156,21 @@ async function loadAttendanceLogs() {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         
-        const { data } = await supabase
-            .from('qr_auth_logs')
-            .select('*')
-            .gte('auth_time', today.toISOString())
-            .order('auth_time', { ascending: false });
+        const todayLogs = mockData.logs.filter(log => {
+            const logDate = new Date(log.auth_time);
+            logDate.setHours(0, 0, 0, 0);
+            return logDate.getTime() === today.getTime();
+        });
 
-        if (!data || data.length === 0) {
+        if (todayLogs.length === 0) {
             authList.innerHTML = '<div class="empty-state">Сегодня еще никто не отметился</div>';
             return;
         }
 
-        renderTodayAttendance(data);
+        renderTodayAttendance(todayLogs);
     } else {
-        // Показываем список дней
         authList.innerHTML = '<p class="loading">Загрузка...</p>';
-        
-        const { data } = await supabase
-            .from('qr_auth_logs')
-            .select('*')
-            .order('auth_time', { ascending: false })
-            .limit(500);
-
-        if (!data || data.length === 0) {
-            authList.innerHTML = '<div class="empty-state">Нет данных</div>';
-            return;
-        }
-
-        renderDaysList(data);
+        renderDaysList(mockData.logs);
     }
 }
 
@@ -533,7 +206,6 @@ function renderDaysList(logs) {
     const authList = document.getElementById('attendanceList');
     authList.innerHTML = '';
     
-    // Группируем по датам
     const byDate = {};
     logs.forEach(log => {
         const date = new Date(log.auth_time);
@@ -549,7 +221,6 @@ function renderDaysList(logs) {
         byDate[dateKey].push(log);
     });
     
-    // Отрисовываем дни
     Object.keys(byDate).forEach(dateKey => {
         const dayItem = document.createElement('div');
         dayItem.className = 'day-item';
@@ -588,7 +259,7 @@ function switchDayView(view) {
 }
 
 // Опоздания для админа
-async function loadLateLogs() {
+function loadLateLogs() {
     const lateList = document.getElementById('lateList');
     lateList.innerHTML = '<p class="loading">Загрузка...</p>';
     
@@ -599,24 +270,22 @@ async function loadLateLogs() {
         dateFilter.setMonth(dateFilter.getMonth() - 1);
     }
     
-    const { data } = await supabase
-        .from('qr_auth_logs')
-        .select('*')
-        .gte('auth_time', dateFilter.toISOString())
-        .order('auth_time', { ascending: false });
+    const filteredLogs = mockData.logs.filter(log => {
+        const logDate = new Date(log.auth_time);
+        return logDate >= dateFilter;
+    });
 
-    if (!data || data.length === 0) {
+    if (filteredLogs.length === 0) {
         lateList.innerHTML = '<div class="empty-state">Нет данных</div>';
         return;
     }
     
-    // Подсчитываем опоздания по пользователям
     const WORK_START_HOUR = 8;
     const WORK_START_MINUTE = 0;
     
     const lateByUser = {};
     
-    data.forEach(log => {
+    filteredLogs.forEach(log => {
         const authTime = new Date(log.auth_time);
         const hour = authTime.getHours();
         const minute = authTime.getMinutes();
@@ -642,7 +311,7 @@ function renderLateSummary(lateByUser) {
     const users = Object.values(lateByUser).sort((a, b) => b.count - a.count);
     
     if (users.length === 0) {
-        lateList.innerHTML = '<div class="empty-state"><img src="svgg/party.svg" alt="Party" style="width: 48px; height: 48px; margin-bottom: 15px;"><br>Опозданий нет!</div>';
+        lateList.innerHTML = '<div class="empty-state"><img src="svgg/alarm.svg" alt="No late" style="width: 48px; height: 48px; opacity: 0.3; margin-bottom: 15px;"><br>Опозданий нет!</div>';
         return;
     }
     
@@ -689,7 +358,6 @@ async function generateQR() {
             throw new Error('QRCode library not loaded');
         }
         
-        // Стандартные цвета: черный код на белом фоне (для лучшего сканирования)
         new QRCode(qrContainer, {
             text: qrData,
             width: 300,
@@ -709,7 +377,6 @@ async function generateQR() {
     }
 }
 
-// Установить сегодняшнюю дату по умолчанию
 function setTodayDate() {
     const dateInput = document.getElementById('qrDate');
     if (dateInput) {
@@ -775,24 +442,19 @@ function printQR() {
     if (tg) tg.HapticFeedback.notificationOccurred('success');
 }
 
-// Управление пользователями (только назначение работником)
-async function loadUsers() {
+// Управление пользователями
+function loadUsers() {
     const usersList = document.getElementById('usersList');
     usersList.innerHTML = '<p class="loading">Загрузка...</p>';
 
-    const { data } = await supabase
-        .from('qr_auth_users')
-        .select('*')
-        .eq('is_worker', false)
-        .eq('is_admin', false)
-        .order('created_at', { ascending: false, nullsFirst: false });
+    const users = mockData.users;
 
-    if (!data || data.length === 0) {
+    if (users.length === 0) {
         usersList.innerHTML = '<div class="empty-state">Нет новых пользователей</div>';
         return;
     }
 
-    renderUsersList(data);
+    renderUsersList(users);
 }
 
 function renderUsersList(users) {
@@ -840,39 +502,37 @@ function renderUsersList(users) {
     });
 }
 
-async function makeWorker(telegramId) {
-    const { error } = await supabase
-        .from('qr_auth_users')
-        .update({ is_worker: true })
-        .eq('telegram_id', telegramId);
-
-    if (error) {
-        if (tg) tg.showAlert('Ошибка обновления');
-        else alert('Ошибка обновления');
-        return;
+function makeWorker(telegramId) {
+    const userIndex = mockData.users.findIndex(u => u.telegram_id === telegramId);
+    if (userIndex !== -1) {
+        const user = mockData.users[userIndex];
+        mockData.workers.push({
+            ...user,
+            is_worker: true,
+            display_name: user.full_name,
+            gender: 'M'
+        });
+        mockData.users.splice(userIndex, 1);
+        saveMockData(mockData);
     }
     
     if (tg) tg.HapticFeedback.notificationOccurred('success');
     loadUsers();
 }
 
-// Управление работниками (редактирование + отнять статус)
-async function loadWorkers() {
+// Управление работниками
+function loadWorkers() {
     const workersList = document.getElementById('workersList');
     workersList.innerHTML = '<p class="loading">Загрузка...</p>';
 
-    const { data } = await supabase
-        .from('qr_auth_users')
-        .select('*')
-        .eq('is_worker', true)
-        .order('full_name', { ascending: true });
+    const workers = mockData.workers;
 
-    if (!data || data.length === 0) {
+    if (workers.length === 0) {
         workersList.innerHTML = '<div class="empty-state">Нет работников</div>';
         return;
     }
 
-    renderWorkersList(data);
+    renderWorkersList(workers);
 }
 
 function renderWorkersList(workers) {
@@ -951,7 +611,7 @@ function selectGenderInline(telegramId, gender) {
     if (tg) tg.HapticFeedback.impactOccurred('light');
 }
 
-async function saveWorkerEdit(telegramId) {
+function saveWorkerEdit(telegramId) {
     const item = event.target.closest('.user-item');
     const displayName = document.getElementById(`editName_${telegramId}`).value.trim();
     const gender = item.dataset.selectedGender || 'M';
@@ -962,126 +622,50 @@ async function saveWorkerEdit(telegramId) {
         return;
     }
     
-    const { error } = await supabase
-        .from('qr_auth_users')
-        .update({ 
-            display_name: displayName,
-            gender: gender
-        })
-        .eq('telegram_id', telegramId);
-
-    if (error) {
-        if (tg) tg.showAlert('Ошибка обновления');
-        else alert('Ошибка обновления');
-        return;
+    const workerIndex = mockData.workers.findIndex(w => w.telegram_id === telegramId);
+    if (workerIndex !== -1) {
+        mockData.workers[workerIndex].display_name = displayName;
+        mockData.workers[workerIndex].gender = gender;
+        saveMockData(mockData);
     }
     
     if (tg) tg.HapticFeedback.notificationOccurred('success');
     loadWorkers();
 }
 
-async function removeWorkerStatus(telegramId) {
-    const { error } = await supabase
-        .from('qr_auth_users')
-        .update({ is_worker: false })
-        .eq('telegram_id', telegramId);
-
-    if (error) {
-        if (tg) tg.showAlert('Ошибка обновления');
-        else alert('Ошибка обновления');
-        return;
+function removeWorkerStatus(telegramId) {
+    const workerIndex = mockData.workers.findIndex(w => w.telegram_id === telegramId);
+    if (workerIndex !== -1) {
+        const worker = mockData.workers[workerIndex];
+        mockData.users.push({
+            telegram_id: worker.telegram_id,
+            full_name: worker.full_name,
+            username: worker.username,
+            is_admin: false,
+            is_worker: false,
+            created_at: new Date().toISOString()
+        });
+        mockData.workers.splice(workerIndex, 1);
+        saveMockData(mockData);
     }
     
     if (tg) tg.HapticFeedback.notificationOccurred('success');
     loadWorkers();
 }
 
-async function deleteUser(telegramId, fullName) {
-    // Простое подтверждение без использования неподдерживаемых методов
+function deleteUser(telegramId, fullName) {
     const confirmed = confirm(`Удалить пользователя "${fullName}"?\n\nЭто действие нельзя отменить.`);
     
     if (confirmed) {
-        await performDeleteUser(telegramId);
-    }
-}
-
-async function performDeleteUser(telegramId) {
-    try {
-        // Удаляем логи пользователя
-        const { error: logsError } = await supabase
-            .from('qr_auth_logs')
-            .delete()
-            .eq('user_id', telegramId);
-        
-        if (logsError) {
-            console.error('Error deleting logs:', logsError);
-            throw logsError;
-        }
-        
-        // Удаляем пользователя
-        const { error: userError } = await supabase
-            .from('qr_auth_users')
-            .delete()
-            .eq('telegram_id', telegramId);
-
-        if (userError) {
-            console.error('Error deleting user:', userError);
-            throw userError;
+        const userIndex = mockData.users.findIndex(u => u.telegram_id === telegramId);
+        if (userIndex !== -1) {
+            mockData.users.splice(userIndex, 1);
+            saveMockData(mockData);
         }
         
         if (tg) tg.HapticFeedback.notificationOccurred('success');
-        
-        // Небольшая задержка перед обновлением списка
-        setTimeout(() => {
-            loadUsers();
-        }, 300);
-    } catch (error) {
-        console.error('Delete error:', error);
-        if (tg) tg.showAlert('Ошибка удаления: ' + error.message);
-        else alert('Ошибка удаления: ' + error.message);
+        setTimeout(() => loadUsers(), 300);
     }
-}
-
-async function toggleWorkerStatus(telegramId, currentStatus) {
-    const newStatus = !currentStatus;
-
-    const { error } = await supabase
-        .from('qr_auth_users')
-        .update({ is_worker: newStatus })
-        .eq('telegram_id', telegramId);
-
-    if (error) {
-        if (tg) tg.showAlert('Ошибка обновления');
-        else alert('Ошибка обновления');
-        return;
-    }
-    
-    if (tg) tg.HapticFeedback.notificationOccurred('success');
-    loadUsers();
-}
-
-function subscribeToAuthLogs() {
-    supabase
-        .channel('qr_auth_logs_channel')
-        .on('postgres_changes', 
-            { event: 'INSERT', schema: 'public', table: 'qr_auth_logs' },
-            () => {
-                if (tg) tg.HapticFeedback.notificationOccurred('success');
-                if (currentLogView === 'attendance') loadAttendanceLogs();
-                else loadLateLogs();
-            }
-        )
-        .subscribe();
-}
-
-function showResultMessage(message, type) {
-    const resultDiv = document.getElementById('scanResult');
-    resultDiv.textContent = message;
-    resultDiv.className = `result-message ${type}`;
-}
-
-function hideResultMessage() {
-    document.getElementById('scanResult').className = 'result-message hidden';
 }
 
 init();
@@ -1097,7 +681,6 @@ function toggleMobileMenu() {
     if (tg) tg.HapticFeedback.impactOccurred('light');
 }
 
-// Закрываем меню при выборе пункта
 function closeMenuOnSelect() {
     if (window.innerWidth <= 768) {
         const nav = document.getElementById('headerNav');
