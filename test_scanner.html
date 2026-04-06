@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Scanner Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #0a0b0f;
+            color: #e8eaed;
+        }
+        #reader {
+            width: 100%;
+            border: 2px solid #4f8ff7;
+            margin: 20px 0;
+        }
+        .result {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            background: #1a1d26;
+            border: 1px solid #4f8ff7;
+        }
+        .success {
+            background: rgba(76, 175, 80, 0.1);
+            border-color: #4CAF50;
+            color: #4CAF50;
+        }
+        .error {
+            background: rgba(244, 67, 54, 0.1);
+            border-color: #f44336;
+            color: #f44336;
+        }
+        button {
+            padding: 12px 24px;
+            background: #4f8ff7;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+        }
+        button:hover {
+            background: #3d7de0;
+        }
+        .log {
+            background: #12141a;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 QR Scanner Test</h1>
+    <p>Тест сканера QR-кодов для отладки</p>
+    
+    <div>
+        <button onclick="startScanner()">▶️ Запустить сканер</button>
+        <button onclick="stopScanner()">⏹️ Остановить сканер</button>
+    </div>
+    
+    <div id="reader"></div>
+    
+    <div id="result" class="result" style="display: none;"></div>
+    
+    <h3>Лог событий:</h3>
+    <div id="log" class="log"></div>
+    
+    <h3>Информация о библиотеке:</h3>
+    <div id="info" class="log"></div>
+
+    <script>
+        let html5QrCode = null;
+        
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            const color = type === 'error' ? '#f44336' : type === 'success' ? '#4CAF50' : '#9ca3af';
+            logDiv.innerHTML = `<div style="color: ${color}">[${time}] ${message}</div>` + logDiv.innerHTML;
+        }
+        
+        function showResult(message, type) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = message;
+            resultDiv.className = 'result ' + type;
+            resultDiv.style.display = 'block';
+        }
+        
+        function startScanner() {
+            log('Попытка запуска сканера...');
+            
+            if (html5QrCode) {
+                log('Сканер уже запущен', 'error');
+                return;
+            }
+            
+            try {
+                html5QrCode = new Html5Qrcode("reader");
+                log('Html5Qrcode объект создан', 'success');
+                
+                html5QrCode.start(
+                    { facingMode: "environment" },
+                    { 
+                        fps: 10, 
+                        qrbox: { width: 250, height: 250 }
+                    },
+                    (decodedText, decodedResult) => {
+                        log('✅ QR код отсканирован: ' + decodedText, 'success');
+                        showResult('Отсканировано: ' + decodedText, 'success');
+                        
+                        if (decodedText.startsWith('QR_AUTH_')) {
+                            log('✅ Формат QR правильный!', 'success');
+                        } else {
+                            log('⚠️ QR не начинается с QR_AUTH_', 'error');
+                        }
+                    },
+                    (errorMessage) => {
+                        // Игнорируем ошибки поиска QR
+                    }
+                ).then(() => {
+                    log('Камера запущена успешно', 'success');
+                }).catch(err => {
+                    log('❌ Ошибка запуска камеры: ' + err, 'error');
+                    showResult('Ошибка: ' + err, 'error');
+                });
+                
+            } catch (err) {
+                log('❌ Ошибка создания сканера: ' + err, 'error');
+                showResult('Ошибка: ' + err, 'error');
+            }
+        }
+        
+        async function stopScanner() {
+            if (!html5QrCode) {
+                log('Сканер не запущен', 'error');
+                return;
+            }
+            
+            try {
+                await html5QrCode.stop();
+                html5QrCode = null;
+                log('Сканер остановлен', 'success');
+                showResult('Сканер остановлен', 'success');
+            } catch (err) {
+                log('❌ Ошибка остановки: ' + err, 'error');
+            }
+        }
+        
+        // Проверяем доступность библиотеки
+        window.addEventListener('load', () => {
+            const infoDiv = document.getElementById('info');
+            
+            if (typeof Html5Qrcode !== 'undefined') {
+                infoDiv.innerHTML = `
+                    <div style="color: #4CAF50">✅ Html5Qrcode загружен</div>
+                    <div>Тип: ${typeof Html5Qrcode}</div>
+                `;
+                log('Библиотека Html5Qrcode загружена', 'success');
+            } else {
+                infoDiv.innerHTML = `<div style="color: #f44336">❌ Html5Qrcode НЕ загружен</div>`;
+                log('Библиотека Html5Qrcode НЕ загружена!', 'error');
+            }
+            
+            // Проверяем доступ к камере
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                log('API камеры доступен', 'success');
+            } else {
+                log('API камеры НЕ доступен', 'error');
+            }
+            
+            // Проверяем HTTPS
+            if (location.protocol === 'https:' || location.hostname === 'localhost') {
+                log('Протокол безопасный (HTTPS или localhost)', 'success');
+            } else {
+                log('⚠️ Используется HTTP - камера может не работать', 'error');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Авторизация</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+    <!-- Fixed Header -->
+    <header class="app-header">
+        <div class="header-left">
+            <div id="userAvatar" class="user-avatar">
+                <img src="svgg/user.svg" alt="User" style="width: 24px; height: 24px;">
+            </div>
+            <div class="user-details">
+                <div id="userName" class="user-name">Загрузка...</div>
+                <div id="userRole" class="user-role">Пользователь</div>
+            </div>
+        </div>
+        <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleMobileMenu()">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+        <nav id="headerNav" class="header-nav"></nav>
+    </header>
+
+    <div class="container" id="mainContainer">
+        <!-- Приветствие для админа -->
+        <div id="adminWelcome" class="admin-welcome hidden">
+            <div class="welcome-quote">Кто много говорит — тот мало зарабатывает</div>
+        </div>
+
+        <!-- Экран сканирования -->
+        <div id="scanTab" class="tab-content hidden">
+            <div class="scan-card">
+                <div class="scanner-container">
+                    <div id="qr-reader"></div>
+                </div>
+            </div>
+            <div id="scanResult" class="result-message hidden"></div>
+        </div>
+
+        <!-- История опозданий пользователя -->
+        <div id="historyTab" class="tab-content hidden">
+            <div class="history-filters">
+                <button class="filter-btn active" onclick="filterHistory('week')">Неделя</button>
+                <button class="filter-btn" onclick="filterHistory('month')">Месяц</button>
+            </div>
+            <div id="historyList" class="history-list"></div>
+        </div>
+
+        <!-- Админ: Логи -->
+        <div id="logsTab" class="tab-content hidden">
+            <!-- Заголовок текущей вкладки -->
+            <div class="current-view-title" id="currentViewTitle">Отметки</div>
+
+            <!-- Отметки -->
+            <div id="attendanceView">
+                <div class="day-view-tabs">
+                    <button class="day-view-btn active" onclick="switchDayView('today')">Сегодня</button>
+                    <button class="day-view-btn" onclick="switchDayView('all')">Все дни</button>
+                </div>
+                <div id="attendanceList" class="auth-list"></div>
+            </div>
+
+            <!-- Опоздания -->
+            <div id="lateView" class="hidden">
+                <div class="late-filters">
+                    <button class="late-filter-btn active" onclick="switchLateFilter('week')">Неделя</button>
+                    <button class="late-filter-btn" onclick="switchLateFilter('month')">Месяц</button>
+                </div>
+                <div id="lateList" class="late-list"></div>
+            </div>
+        </div>
+
+        <!-- Админ: Пользователи -->
+        <div id="usersTab" class="tab-content hidden">
+            <div class="users-header">
+                <h3>Пользователи</h3>
+                <button class="btn-refresh" onclick="loadUsers()">
+                    <img src="svgg/reload.svg" alt="Reload" class="btn-icon"> Обновить
+                </button>
+            </div>
+            <div id="usersList" class="users-list"></div>
+        </div>
+
+        <!-- Админ: Работники -->
+        <div id="workersTab" class="tab-content hidden">
+            <div class="users-header">
+                <h3>Работники</h3>
+                <button class="btn-refresh" onclick="loadWorkers()">
+                    <img src="svgg/reload.svg" alt="Reload" class="btn-icon"> Обновить
+                </button>
+            </div>
+            <div id="workersList" class="users-list"></div>
+        </div>
+
+        <!-- Админ: Генератор QR -->
+        <div id="generateTab" class="tab-content hidden">
+            <div class="generate-card">
+                <h3>Генератор QR-кодов</h3>
+                <div class="form-group">
+                    <label>Выберите дату</label>
+                    <input type="date" id="qrDate" class="form-date">
+                </div>
+                <button class="btn-primary" onclick="generateQR()">
+                    Сгенерировать QR
+                </button>
+                
+                <div id="qrPreview" class="qr-preview hidden">
+                    <div id="qrCanvas" class="qr-canvas-container"></div>
+                    <div class="qr-actions">
+                        <button class="btn-secondary" onclick="downloadQR()">
+                            <img src="svgg/download.svg" alt="Download" class="btn-icon"> Скачать
+                        </button>
+                        <button class="btn-secondary" onclick="printQR()">
+                            <img src="svgg/print.svg" alt="Print" class="btn-icon"> Печать
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
