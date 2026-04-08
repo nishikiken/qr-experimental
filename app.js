@@ -81,6 +81,9 @@ function showAdminPanel() {
     document.getElementById('userRole').textContent = 'Администратор';
     document.getElementById('userRole').classList.add('admin');
     
+    // Add admin mode class to body for FAB visibility
+    document.body.classList.add('admin-mode');
+    
     const headerNav = document.getElementById('headerNav');
     headerNav.innerHTML = `
         <button class="nav-btn" onclick="showAdminTab('logs', 'attendance')">Отметки</button>
@@ -95,8 +98,18 @@ function showAdminPanel() {
 
 function showAdminTab(tab, subview) {
     closeMenuOnSelect();
+    
+    // Update sidebar nav buttons
     document.querySelectorAll('.header-nav .nav-btn').forEach(btn => btn.classList.remove('active'));
-    event?.target?.classList.add('active');
+    if (event?.target?.classList.contains('nav-btn')) {
+        event.target.classList.add('active');
+    }
+    
+    // Update bottom nav items
+    document.querySelectorAll('.bottom-nav-item').forEach(item => item.classList.remove('active'));
+    if (event?.target?.closest('.bottom-nav-item')) {
+        event.target.closest('.bottom-nav-item').classList.add('active');
+    }
     
     document.getElementById('adminWelcome').classList.add('hidden');
     document.getElementById('logsTab').classList.remove('active');
@@ -689,3 +702,97 @@ function closeMenuOnSelect() {
         btn.classList.remove('active');
     }
 }
+
+// ============================================
+// SWIPE NAVIGATION (Mobile)
+// ============================================
+
+let touchStartX = 0;
+let touchEndX = 0;
+let touchStartY = 0;
+let touchEndY = 0;
+
+const adminTabs = ['logs-attendance', 'logs-late', 'users', 'workers', 'generate'];
+let currentTabIndex = 0;
+
+function handleSwipe() {
+    const swipeThreshold = 50;
+    const verticalThreshold = 30;
+    
+    const deltaX = touchEndX - touchStartX;
+    const deltaY = Math.abs(touchEndY - touchStartY);
+    
+    // Ignore if vertical swipe
+    if (deltaY > verticalThreshold) return;
+    
+    // Swipe left (next tab)
+    if (deltaX < -swipeThreshold && currentTabIndex < adminTabs.length - 1) {
+        currentTabIndex++;
+        navigateToTab(currentTabIndex);
+        if (tg) tg.HapticFeedback.impactOccurred('light');
+    }
+    
+    // Swipe right (previous tab)
+    if (deltaX > swipeThreshold && currentTabIndex > 0) {
+        currentTabIndex--;
+        navigateToTab(currentTabIndex);
+        if (tg) tg.HapticFeedback.impactOccurred('light');
+    }
+}
+
+function navigateToTab(index) {
+    const tab = adminTabs[index];
+    
+    if (tab === 'logs-attendance') {
+        showAdminTab('logs', 'attendance');
+        updateBottomNav(0);
+    } else if (tab === 'logs-late') {
+        showAdminTab('logs', 'late');
+        updateBottomNav(1);
+    } else if (tab === 'users') {
+        showAdminTab('users');
+        updateBottomNav(2);
+    } else if (tab === 'workers') {
+        showAdminTab('workers');
+        updateBottomNav(3);
+    } else if (tab === 'generate') {
+        showAdminTab('generate');
+        // FAB handles this
+    }
+}
+
+function updateBottomNav(index) {
+    const items = document.querySelectorAll('.bottom-nav-item');
+    items.forEach((item, i) => {
+        item.classList.toggle('active', i === index);
+    });
+}
+
+// Add touch listeners
+if (window.innerWidth <= 768) {
+    const container = document.getElementById('mainContainer');
+    
+    container.addEventListener('touchstart', e => {
+        touchStartX = e.changedTouches[0].screenX;
+        touchStartY = e.changedTouches[0].screenY;
+    }, { passive: true });
+    
+    container.addEventListener('touchend', e => {
+        touchEndX = e.changedTouches[0].screenX;
+        touchEndY = e.changedTouches[0].screenY;
+        handleSwipe();
+    }, { passive: true });
+}
+
+// Update current tab index when clicking nav
+const originalShowAdminTab = showAdminTab;
+showAdminTab = function(tab, subview) {
+    originalShowAdminTab(tab, subview);
+    
+    // Update current tab index
+    if (tab === 'logs' && subview === 'attendance') currentTabIndex = 0;
+    else if (tab === 'logs' && subview === 'late') currentTabIndex = 1;
+    else if (tab === 'users') currentTabIndex = 2;
+    else if (tab === 'workers') currentTabIndex = 3;
+    else if (tab === 'generate') currentTabIndex = 4;
+};

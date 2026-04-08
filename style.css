@@ -1641,3 +1641,218 @@ button:focus,
         font-size: 16px;
     }
 }
+
+/* ============================================
+   BOTTOM NAVIGATION (Mobile Only)
+   ============================================ */
+
+.bottom-nav {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 70px;
+    background: rgba(26, 29, 38, 0.98);
+    backdrop-filter: blur(40px) saturate(180%);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+    border-top: 1px solid rgba(79, 143, 247, 0.2);
+    z-index: 10000;
+    padding-bottom: env(safe-area-inset-bottom);
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.bottom-nav-container {
+    display: flex;
+    height: 100%;
+    justify-content: space-around;
+    align-items: center;
+    padding: 0 8px;
+}
+
+.bottom-nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 8px 4px;
+    border-radius: 12px;
+    position: relative;
+    max-width: 80px;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.bottom-nav-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%) scaleX(0);
+    width: 40px;
+    height: 3px;
+    background: var(--accent-blue);
+    border-radius: 0 0 3px 3px;
+    transition: transform 0.3s ease;
+}
+
+.bottom-nav-item:active {
+    transform: scale(0.9);
+}
+
+.bottom-nav-item.active {
+    color: var(--accent-blue);
+}
+
+.bottom-nav-item.active::before {
+    transform: translateX(-50%) scaleX(1);
+}
+
+.bottom-nav-icon {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    transition: all 0.3s ease;
+}
+
+.bottom-nav-item.active .bottom-nav-icon {
+    transform: translateY(-2px) scale(1.1);
+}
+
+.bottom-nav-label {
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
+/* Floating Action Button */
+.fab {
+    display: none;
+    position: fixed;
+    bottom: 90px;
+    right: 20px;
+    width: 56px;
+    height: 56px;
+    background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+    border-radius: 50%;
+    box-shadow: 0 8px 24px rgba(79, 143, 247, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 9999;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: none;
+    color: white;
+    font-size: 24px;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.fab:active {
+    transform: scale(0.9);
+}
+
+.fab:hover {
+    transform: scale(1.1);
+    box-shadow: 0 12px 32px rgba(79, 143, 247, 0.6);
+}
+
+/* Tab content slide animation */
+.tab-content {
+    animation: slideInContent 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideInContent {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Mobile Adjustments */
+@media (max-width: 768px) {
+    /* Hide sidebar on mobile */
+    .app-header {
+        display: none;
+    }
+    
+    /* Show bottom nav */
+    .bottom-nav {
+        display: block;
+    }
+    
+    /* Show FAB for admin */
+    body.admin-mode .fab {
+        display: flex;
+    }
+    
+    /* Adjust container */
+    .container {
+        margin-left: 0;
+        width: 100%;
+        padding: 1.5rem 1rem;
+        padding-top: 1.5rem;
+        padding-bottom: 90px; /* Space for bottom nav */
+    }
+    
+    /* Adjust welcome screen */
+    .admin-welcome {
+        min-height: calc(100vh - 90px);
+    }
+    
+    /* Make cards more compact */
+    .scan-card,
+    .generate-card {
+        padding: 1.5rem;
+    }
+    
+    /* Smaller buttons */
+    .btn-primary,
+    .btn-secondary {
+        padding: 12px;
+        font-size: 12px;
+    }
+    
+    /* Compact user items */
+    .user-item,
+    .auth-item,
+    .history-item {
+        padding: 16px;
+    }
+    
+    /* Smaller titles */
+    .current-view-title {
+        font-size: 18px;
+        margin-bottom: 16px;
+    }
+    
+    .users-header h3 {
+        font-size: 16px;
+    }
+}
+
+/* Tablet - Keep sidebar */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .bottom-nav {
+        display: none;
+    }
+    
+    .fab {
+        display: none;
+    }
+}

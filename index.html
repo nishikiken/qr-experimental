@@ -128,6 +128,33 @@
         </div>
     </div>
 
+    <!-- Bottom Navigation (Mobile) -->
+    <nav class="bottom-nav" id="bottomNav">
+        <div class="bottom-nav-container">
+            <div class="bottom-nav-item" onclick="showAdminTab('logs', 'attendance')">
+                <div class="bottom-nav-icon">📋</div>
+                <div class="bottom-nav-label">Отметки</div>
+            </div>
+            <div class="bottom-nav-item" onclick="showAdminTab('logs', 'late')">
+                <div class="bottom-nav-icon">⏰</div>
+                <div class="bottom-nav-label">Опоздания</div>
+            </div>
+            <div class="bottom-nav-item" onclick="showAdminTab('users')">
+                <div class="bottom-nav-icon">👥</div>
+                <div class="bottom-nav-label">Люди</div>
+            </div>
+            <div class="bottom-nav-item" onclick="showAdminTab('workers')">
+                <div class="bottom-nav-icon">💼</div>
+                <div class="bottom-nav-label">Работники</div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Floating Action Button (Mobile Admin) -->
+    <button class="fab" id="fabBtn" onclick="showAdminTab('generate')" title="Генератор QR">
+        ⚡
+    </button>
+
     <script src="app.js"></script>
 </body>
 </html>
